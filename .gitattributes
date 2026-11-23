@@ -1,0 +1,2 @@
+*.sh text eol=lf
+database/Jaime_Cariqueo_TecControl.sql -text

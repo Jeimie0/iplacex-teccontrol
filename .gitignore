@@ -1,0 +1,17 @@
+# Referencias locales del proyecto
+/sources/
+/AGENTS.md
+/documentacion/originales/
+
+# Credenciales y claves privadas
+.env
+.env.*
+!.env.example
+/.local/
+*.key
+*.p12
+*.pfx
+
+# Archivos generados durante la ejecución
+/storage/logs/
+/storage/sessions/

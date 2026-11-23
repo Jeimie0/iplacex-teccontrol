@@ -1,0 +1,12 @@
+**
+!Dockerfile
+!docker/
+!docker/**
+!public/
+!public/**
+!src/
+!src/**
+!bin/
+!bin/crear-admin.php
+!tests/
+!tests/verificar-base.php

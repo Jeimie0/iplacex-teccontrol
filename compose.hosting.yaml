@@ -1,0 +1,58 @@
+name: teccontrol-hosting
+
+services:
+  web:
+    build: .
+    entrypoint: ["docker-php-entrypoint"]
+    command: ["apache2-foreground"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME:-teccontrol}
+      DB_USER: ${DB_USER:-teccontrol}
+      DB_PASSWORD: ${DB_PASSWORD:?Completa DB_PASSWORD}
+      TEC_DOMAIN: ${TEC_DOMAIN:?Define el dominio}
+      TEC_ORIGEN_HTTPS: ${TEC_ORIGEN_HTTPS:?Define el origen HTTPS}
+      SESSION_IDLE_SECONDS: ${SESSION_IDLE_SECONDS:-1800}
+      SESSION_MAX_SECONDS: ${SESSION_MAX_SECONDS:-28800}
+    ports:
+      - "${HOSTING_BIND:-0.0.0.0}:${HOSTING_HTTP_PORT:-80}:80"
+      - "${HOSTING_BIND:-0.0.0.0}:${HOSTING_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./docker/apache/hosting.conf:/etc/apache2/sites-available/teccontrol.conf:ro
+      - ${HOSTING_TLS_DIR:-./.local/hosting-tls}:/var/lib/teccontrol/hosting-tls:ro
+      - ${HOSTING_ACME_ROOT:-./.local/acme}:/var/www/acme:ro
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@stream_socket_client('tcp://127.0.0.1:443') === false ? 1 : 0);"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-teccontrol}
+      MYSQL_USER: ${DB_USER:-teccontrol}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Completa DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Completa DB_ROOT_PASSWORD}
+      MYSQL_ROOT_HOST: localhost
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/01_esquema_provisional.sql:/docker-entrypoint-initdb.d/10-esquema.sql:ro
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - MYSQL_PWD="$$MYSQL_PASSWORD" mysql --protocol=TCP --host=127.0.0.1 --user="$$MYSQL_USER" --database="$$MYSQL_DATABASE" --execute='SELECT 1 FROM estados_orden LIMIT 1' >/dev/null
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+volumes:
+  mysql_data:
